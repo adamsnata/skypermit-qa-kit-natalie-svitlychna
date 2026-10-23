@@ -19,17 +19,22 @@ Source specification (`../skypermit/docs/`):
 
 Base every test case on these docs and cite the doc or section it comes from. Where the docs are ambiguous or contradict each other, check `05-open-questions.md` and `07-clarifications.md`. If the question is still open, list it as an open question; don't invent the expected behaviour.
 
-## Где можно читать и писать
+## Мова
 
-| Папка | Чтение | Запись / команды |
+- Усі файли в цьому репозиторії (тест-кейси, тест-плани, звіти ревʼю, скіли, агенти, коментарі, commit messages) пиши **українською**.
+- Ідентифікатори зі специфікації та коду (`DRAFT`, `POST /api/v1/requests`, `422`, `data-testid`) залишай як в оригіналі.
+
+## Де можна читати й писати
+
+| Папка | Читання | Запис / команди |
 |---|---|---|
-| `C:\workspace\skypermit-qa-kit-natalie-svitlychna` (этот репозиторий) | да | да — все изменения только здесь |
-| `C:\workspace\skypermit` | да (Read / Glob / Grep) | нет — ни файлами, ни shell |
+| `C:\workspace\skypermit-qa-kit-natalie-svitlychna` (цей репозиторій) | так | так — усі зміни лише тут |
+| `C:\workspace\skypermit` | так (Read / Glob / Grep) | ні — ні файлами, ні shell |
 
-- Любая команда, которая меняет файлы (`mv`, `cp`, `rm`, `sed -i`, `>`, `Set-Content` и т.п.),
-  должна указывать только пути внутри этого репозитория.
-- Перед shell-командой, которая что-то пишет, убедись, что рабочая папка — корень QA-kit
-  (`pwd`); если нет — сначала верни её туда.
+- Будь-яка команда, що змінює файли (`mv`, `cp`, `rm`, `sed -i`, `>`, `Set-Content` тощо),
+  має вказувати лише шляхи всередині цього репозиторію.
+- Перед shell-командою, яка щось записує, переконайся, що робоча папка — корінь QA-kit
+  (`pwd`); якщо ні — спершу поверни її туди.
 
 ## `../skypermit` is READ-ONLY
 
@@ -41,14 +46,14 @@ Claude may only **read** files in `../skypermit`. It must never:
 
 Use the Read, Glob and Grep tools to look at its contents. All output goes into this repository only.
 
-- Предпочитай Read / Glob / Grep с абсолютными путями (`C:\workspace\skypermit\...`), а не shell.
-- Если без shell не обойтись, команда должна выполняться из корня этого репозитория,
-  а на skypermit ссылаться только по абсолютному пути
-  (`grep ... /c/workspace/skypermit/docs/...`). Никогда не делай `cd` / `Set-Location`
-  в `../skypermit` — рабочая папка сохраняется между вызовами, и все следующие команды
-  окажутся «запущенными там».
-- Если рабочая папка всё же оказалась внутри `../skypermit`, первым делом верни её
-  в корень QA-kit, ничего больше не запуская.
+- Віддавай перевагу Read / Glob / Grep з абсолютними шляхами (`C:\workspace\skypermit\...`), а не shell.
+- Якщо без shell не обійтися, команда має виконуватися з кореня цього репозиторію,
+  а на skypermit посилатися лише за абсолютним шляхом
+  (`grep ... /c/workspace/skypermit/docs/...`). Ніколи не роби `cd` / `Set-Location`
+  у `../skypermit` — робоча папка зберігається між викликами, і всі наступні команди
+  виявляться «запущеними там».
+- Якщо робоча папка все ж опинилася всередині `../skypermit`, насамперед поверни її
+  в корінь QA-kit, нічого більше не запускаючи.
 
 ## Planned directory structure
 
