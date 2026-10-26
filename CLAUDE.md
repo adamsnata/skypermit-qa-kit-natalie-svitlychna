@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Purpose
 
-This is a QA kit for the **skypermit** project, which lives at `../skypermit` (`C:\workspace\skypermit`). Claude's main job here is to write **manual test cases and test plans** from the specification in `../skypermit/docs/`. Writing automated tests is not part of the job unless the user asks for it.
+This is a QA kit for the **skypermit** project, which lives at `../skypermit`. Claude's main job here is to write **manual test cases and test plans** from the specification in `../skypermit/docs/`. Writing automated tests is not part of the job unless the user asks for it.
 
 Source specification (`../skypermit/docs/`):
 
@@ -28,8 +28,8 @@ Base every test case on these docs and cite the doc or section it comes from. Wh
 
 | Папка | Читання | Запис / команди |
 |---|---|---|
-| `C:\workspace\skypermit-qa-kit-natalie-svitlychna` (цей репозиторій) | так | так — усі зміни лише тут |
-| `C:\workspace\skypermit` | так (Read / Glob / Grep) | ні — ні файлами, ні shell |
+| `.` (корінь цього репозиторію) | так | так — усі зміни лише тут |
+| `../skypermit` | так (Read / Glob / Grep) | ні — ні файлами, ні shell |
 
 - Будь-яка команда, що змінює файли (`mv`, `cp`, `rm`, `sed -i`, `>`, `Set-Content` тощо),
   має вказувати лише шляхи всередині цього репозиторію.
@@ -46,10 +46,10 @@ Claude may only **read** files in `../skypermit`. It must never:
 
 Use the Read, Glob and Grep tools to look at its contents. All output goes into this repository only.
 
-- Віддавай перевагу Read / Glob / Grep з абсолютними шляхами (`C:\workspace\skypermit\...`), а не shell.
+- Віддавай перевагу Read / Glob / Grep зі шляхами `../skypermit/...`, а не shell.
 - Якщо без shell не обійтися, команда має виконуватися з кореня цього репозиторію,
-  а на skypermit посилатися лише за абсолютним шляхом
-  (`grep ... /c/workspace/skypermit/docs/...`). Ніколи не роби `cd` / `Set-Location`
+  а на skypermit посилатися лише за відносним шляхом
+  (`grep ... ../skypermit/docs/...`). Ніколи не роби `cd` / `Set-Location`
   у `../skypermit` — робоча папка зберігається між викликами, і всі наступні команди
   виявляться «запущеними там».
 - Якщо робоча папка все ж опинилася всередині `../skypermit`, насамперед поверни її
@@ -58,7 +58,7 @@ Use the Read, Glob and Grep tools to look at its contents. All output goes into 
 ## Planned directory structure
 
 - `test-cases/`: generated test cases.
-- `test-plans/`: generated one-page test plans (`TP-<doc-name>.md` per document, `TP-all-docs.md` for the whole folder). Produced by the `test-plan` skill.
+- `test-plans/`: generated one-page test plans (`TP-<doc-name>.md` per document, `TP-all-docs.md` for the whole folder). Produced by the `test-plan-creator` skill.
 - `.claude/skills/`: project skills for Claude Code, such as reusable workflows for generating test cases and plans.
 
 Create `test-cases/` and `test-plans/` when the first artifact is added.

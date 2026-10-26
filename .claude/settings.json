@@ -1,10 +1,37 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(node scripts/uncovered-rules.mjs:*)",
+      "Read(../skypermit/**)"
+    ],
     "deny": [
       "Edit(../skypermit/**)",
       "Write(../skypermit/**)",
       "WebFetch",
       "WebSearch"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/validate-test-case.mjs\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/usage-report.mjs\""
+          }
+        ]
+      }
     ]
   }
 }
