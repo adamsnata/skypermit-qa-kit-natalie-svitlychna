@@ -4,20 +4,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Purpose
 
-This is a QA kit for the **skypermit** project, which lives at `../skypermit`. Claude's main job here is to write **manual test cases and test plans** from the specification in `../skypermit/docs/`. Writing automated tests is not part of the job unless the user asks for it.
+This is a QA kit for the **skypermit** project, which lives at `../skypermit`. Claude's main job here is to write **manual test cases and test plans** from the specification in the Confluence space **SkyPermit Docs**. Writing automated tests is not part of the job unless the user asks for it.
 
-Source specification (`../skypermit/docs/`):
+Source specification — Confluence, space **SkyPermit Docs** (key `SD`, spaceId `294916`,
+site `skypermitdocs.atlassian.net`, cloudId `04cfe3ba-ca1f-4d3c-8ff3-b67f1f3c5083`).
+Читай через MCP-інструменти `mcp__atlassian__getConfluencePage` (за pageId),
+`mcp__atlassian__searchConfluenceUsingCql`, `mcp__atlassian__getPagesInConfluenceSpace`:
 
-- `01-data-model.md`
-- `02-state-machine.md`
-- `03-api-contract.md`
-- `04-frontend-spec.md`
-- `05-open-questions.md`
-- `06-business-rules.md`
-- `07-clarifications.md`
-- `08-uml-diagrams.md`
+| Сторінка | pageId |
+|---|---|
+| 01 — Data Model | 688129 |
+| 02 — Request Lifecycle | 720897 |
+| 03 — API Contract | 753665 |
+| 04 — Frontend Scope | 786433 |
+| 05 — Open Questions | 819201 |
+| 06 — Business Rules | 851969 |
+| 07 — Clarifications | 884737 |
+| 08 — UML Diagrams | 917505 |
 
-Base every test case on these docs and cite the doc or section it comes from. Where the docs are ambiguous or contradict each other, check `05-open-questions.md` and `07-clarifications.md`. If the question is still open, list it as an open question; don't invent the expected behaviour.
+Confluence — **лише читання**: не викликай create/update/comment-інструменти Atlassian.
+Формат Doc ref: `SD/<назва сторінки>#<розділ>`, напр. `SD/03 — API Contract#Authentication & authorisation`.
+Наявні кейси зі старим форматом (`03-api-contract.md#…`) не переписуємо.
+
+Base every test case on these pages and cite the page or section it comes from. Where the docs are ambiguous or contradict each other, check `05 — Open Questions` and `07 — Clarifications`. If the question is still open, list it as an open question; don't invent the expected behaviour.
+
+### Виняток: локальні документи
+
+`scripts/uncovered-rules.mjs` не вміє ходити в MCP і **навмисно читає локальний**
+`../skypermit/docs/06-business-rules.md`. Це єдиний виняток із правила «документація — з Confluence».
+Ризик: локальна копія може відставати від `06 — Business Rules` у Confluence; за розбіжності діє Confluence.
+
+Пошук `data-testid`, маршрутів і логіки гейтів, як і раніше, іде в коді `../skypermit` (`app/`, `components/`, `lib/`).
 
 ## Мова
 
@@ -30,6 +47,7 @@ Base every test case on these docs and cite the doc or section it comes from. Wh
 |---|---|---|
 | `.` (корінь цього репозиторію) | так | так — усі зміни лише тут |
 | `../skypermit` | так (Read / Glob / Grep) | ні — ні файлами, ні shell |
+| Confluence `SD` | так (лише MCP-читання) | ні |
 
 - Будь-яка команда, що змінює файли (`mv`, `cp`, `rm`, `sed -i`, `>`, `Set-Content` тощо),
   має вказувати лише шляхи всередині цього репозиторію.
@@ -49,7 +67,7 @@ Use the Read, Glob and Grep tools to look at its contents. All output goes into 
 - Віддавай перевагу Read / Glob / Grep зі шляхами `../skypermit/...`, а не shell.
 - Якщо без shell не обійтися, команда має виконуватися з кореня цього репозиторію,
   а на skypermit посилатися лише за відносним шляхом
-  (`grep ... ../skypermit/docs/...`). Ніколи не роби `cd` / `Set-Location`
+  (`grep ... ../skypermit/app/...`). Ніколи не роби `cd` / `Set-Location`
   у `../skypermit` — робоча папка зберігається між викликами, і всі наступні команди
   виявляться «запущеними там».
 - Якщо робоча папка все ж опинилася всередині `../skypermit`, насамперед поверни її

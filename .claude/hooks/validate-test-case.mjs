@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// PreToolUse-хук (matcher: Write): перевіряє формат тест-кейсу перед записом у test-cases/<module>/<ID>.md.
+// PreToolUse-хук (matcher: Write|Edit): перевіряє формат тест-кейсу перед записом у test-cases/<module>/<ID>.md.
+// Для Edit береться поточний вміст файлу з диска, застосовується old_string → new_string, і перевіряється повний результат.
 // Код виходу 0 — дозволити запис; 2 — заблокувати, список помилок іде в stderr (його бачить Claude).
 // Лише вбудовані модулі Node. Зміст кейсу відносно docs тут не перевіряється — це робота tc-verifier.
 
@@ -10,6 +11,9 @@ const MODULES = ['auth', 'pilots', 'aircraft', 'requests', 'review', 'gates'];
 const ID_RE = /^(API|E2E)-(OP|RV|AN)(-(OP|RV|AN))?-\d{3}$/;
 const DOCS = ['01-data-model.md', '02-state-machine.md', '03-api-contract.md', '04-frontend-spec.md',
   '05-open-questions.md', '06-business-rules.md', '07-clarifications.md', '08-uml-diagrams.md'];
+// Сторінки Confluence (простір SD) для нового формату Doc ref: SD/<назва сторінки>#<розділ>.
+const SD_PAGES = ['01 — Data Model', '02 — Request Lifecycle', '03 — API Contract', '04 — Frontend Scope',
+  '05 — Open Questions', '06 — Business Rules', '07 — Clarifications', '08 — UML Diagrams'];
 const GATES = ['PILOT', 'AIRCRAFT', 'ZONE', 'TIME_WINDOW'];
 const FIELDS = ['Doc ref', 'Role(s)', 'Preconditions', 'Steps', 'Expected result', 'Rationale'];
 const OPTIONAL = new Set(['Preconditions']);
@@ -36,12 +40,15 @@ function validate(norm, content, root) {
   if (!ID_RE.test(id)) errors.push(`ID «${id}» не відповідає формату <API|E2E>-<OP|RV|AN>[-<OP|RV|AN>]-NNN.`);
 
   // 4. Унікальність ID у всьому test-cases/
+  // Свій модуль пропускаємо: файл за тим самим шляхом — це правка/перезапис того самого кейсу (Edit або Write).
+  // Дубль в іншому модулі блокується завжди.
   const casesDir = path.join(root, 'test-cases');
   if (fs.existsSync(casesDir)) {
     for (const d of fs.readdirSync(casesDir, { withFileTypes: true })) {
       if (!d.isDirectory()) continue;
+      if (d.name === module) continue;
       if (fs.existsSync(path.join(casesDir, d.name, `${id}.md`))) {
-        errors.push(`Кейс ${id} уже існує в test-cases/${d.name}/ — наявні файли не перезаписуються, візьми наступний номер.`);
+        errors.push(`Кейс ${id} уже існує в test-cases/${d.name}/ — ID має бути унікальним у всьому test-cases/, візьми наступний номер.`);
       }
     }
   }
@@ -78,11 +85,20 @@ function validate(norm, content, root) {
   for (const n of known) if (!sections[n].body) errors.push(`Поле «${n}» порожнє (для Preconditions — видали поле повністю).`);
 
   // 7. Doc ref
+  // Приймаються обидва формати: старий `0N-назва.md#розділ` (наявні кейси)
+  // і новий `SD/<назва сторінки>#<розділ>` (нові кейси).
   const docRef = sections['Doc ref'];
   if (docRef && docRef.body) {
     const refs = [...docRef.body.matchAll(/(0[1-8]-[a-z-]+\.md)#/g)].map(r => r[1]);
-    if (!refs.length) errors.push('Doc ref: потрібне хоча б одне посилання у форматі `0N-назва.md#розділ`.');
+    const sdRefs = [...docRef.body.matchAll(/SD\/([^#`\n]+)#/g)].map(r => r[1].trim());
+    if (!refs.length && !sdRefs.length) {
+      errors.push('Doc ref: потрібне хоча б одне посилання у форматі `0N-назва.md#розділ` (наявні кейси) '
+        + 'або `SD/<назва сторінки>#<розділ>` (нові кейси, напр. `SD/06 — Business Rules#1.4 TIME_WINDOW`).');
+    }
     for (const r of refs) if (!DOCS.includes(r)) errors.push(`Doc ref: документа «${r}» немає серед 01–08.`);
+    for (const p of sdRefs) {
+      if (!SD_PAGES.includes(p)) errors.push(`Doc ref: сторінки «SD/${p}» немає серед 01–08 простору SD.`);
+    }
   }
 
   // 8. Steps
@@ -126,9 +142,23 @@ function validate(norm, content, root) {
   return errors;
 }
 
+// Повний текст файлу після Edit; null — якщо Edit не можна змоделювати (його відхилить сам інструмент).
+function applyEdit(abs, oldStr, newStr, replaceAll) {
+  if (typeof oldStr !== 'string' || typeof newStr !== 'string' || oldStr === '') return null;
+  let cur;
+  try { cur = fs.readFileSync(abs, 'utf8'); } catch { return null; }
+  const parts = cur.split(oldStr);
+  const count = parts.length - 1;
+  if (count === 0 || (count > 1 && !replaceAll)) return null;
+  if (replaceAll) return parts.join(newStr);
+  const i = cur.indexOf(oldStr);
+  return cur.slice(0, i) + newStr + cur.slice(i + oldStr.length);
+}
+
 async function main() {
   const input = JSON.parse((await readStdin()) || '{}');
-  if (input.tool_name !== 'Write') return 0;
+  const tool = input.tool_name;
+  if (tool !== 'Write' && tool !== 'Edit') return 0;
   const filePath = input.tool_input && input.tool_input.file_path;
   if (typeof filePath !== 'string') return 0;
 
@@ -136,10 +166,19 @@ async function main() {
   if (!/(?:^|\/)test-cases\//.test(norm) || !norm.endsWith('.md')) return 0;
 
   const root = process.env.CLAUDE_PROJECT_DIR || input.cwd || process.cwd();
-  const errors = validate(norm, String(input.tool_input.content ?? ''), root);
+  const isEdit = tool === 'Edit';
+  let content;
+  if (isEdit) {
+    const ti = input.tool_input;
+    content = applyEdit(path.resolve(input.cwd || root, filePath), ti.old_string, ti.new_string, ti.replace_all === true);
+    if (content === null) return 0;
+  } else {
+    content = String(input.tool_input.content ?? '');
+  }
+  const errors = validate(norm, content, root);
   if (!errors.length) return 0;
 
-  process.stderr.write(`Кейс не записано: ${errors.length} помилок формату (${path.basename(norm)}). Виправ і запиши файл знову:\n`
+  process.stderr.write(`Кейс не ${isEdit ? 'змінено' : 'записано'}: ${errors.length} помилок формату (${path.basename(norm)}). Виправ і ${isEdit ? 'повтори правку' : 'запиши файл знову'}:\n`
     + errors.map(e => `- ${e}`).join('\n') + '\n');
   return 2;
 }

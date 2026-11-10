@@ -1,0 +1,8 @@
+{
+  "browser": {
+    "contextOptions": {
+      "timezoneId": "Europe/Kyiv",
+      "locale": "en-US"
+    }
+  }
+}
