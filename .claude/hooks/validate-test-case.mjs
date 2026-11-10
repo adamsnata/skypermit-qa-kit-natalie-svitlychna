@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const MODULES = ['auth', 'pilots', 'aircraft', 'requests', 'review', 'gates'];
+const MODULES = ['auth', 'pilots', 'aircraft', 'requests', 'review', 'gates', 'api'];
 const ID_RE = /^(API|E2E)-(OP|RV|AN)(-(OP|RV|AN))?-\d{3}$/;
 const DOCS = ['01-data-model.md', '02-state-machine.md', '03-api-contract.md', '04-frontend-spec.md',
   '05-open-questions.md', '06-business-rules.md', '07-clarifications.md', '08-uml-diagrams.md'];
@@ -123,11 +123,12 @@ function validate(norm, content, root) {
   if (exp && exp.body) {
     for (const w of BANNED) if (exp.body.toLowerCase().includes(w)) errors.push(`Expected result: слово «${w}» заборонене — опиши спостережуваний факт.`);
 
-    // 12. failing_gate / rule_reference — лише для модуля gates
-    if (module === 'gates' && /\b422\b/.test(exp.body)) {
+    // 12. failing_gate / rule_reference — для модулів gates та api
+    if ((module === 'gates' || module === 'api') && /\b422\b/.test(exp.body)) {
       const g = exp.body.match(/failing_gate`?\s*(?:=|:)?\s*`?"?([A-Z_]+)/);
-      if (!g || !GATES.includes(g[1])) errors.push(`Expected result (gates, 422): вкажи failing_gate — одне з ${GATES.join(', ')}.`);
-      if (!/rule_reference/.test(exp.body)) errors.push('Expected result (gates, 422): вкажи rule_reference.');
+      if (!g || !GATES.includes(g[1])) errors.push(`Expected result (${module}, 422): вкажи failing_gate — одне з ${GATES.join(', ')}.`);
+      if (!/rule_reference/.test(exp.body)) errors.push(`Expected result (${module}, 422): вкажи rule_reference.`);
+      if (module === 'api' && !/\bmessage\b/.test(exp.body)) errors.push('Expected result (api, 422): вкажи message.');
     }
   }
 

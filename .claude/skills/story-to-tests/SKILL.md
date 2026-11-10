@@ -1,6 +1,6 @@
 ---
 name: story-to-tests
-description: Оркестратор, що веде UI-задачу Jira до схвалених тест-кейсів у Testomat.io — intake, звірка AC з Confluence і кодом, генерація й перевірка кейсів, гейт людини, запис у Testomat. Використовуй, коли користувач викликає /story-to-tests SKY-N або просить «веди задачу SKY-N до тест-кейсів у Testomat», «story to tests». Лише для задач із міткою ui; для api буде окремий флоу.
+description: Оркестратор, що веде UI-задачу Jira до схвалених тест-кейсів у Testomat.io — intake, звірка AC з Confluence і кодом, генерація й перевірка кейсів, гейт людини, запис у Testomat. Використовуй, коли користувач викликає /story-to-tests SKY-N або просить «веди задачу SKY-N до тест-кейсів у Testomat», «story to tests». Лише для задач із міткою ui; для api є /story-to-api-tests.
 argument-hint: "<ключ задачі Jira>, напр. SKY-3"
 disable-model-invocation: true   # дорогий пайплайн — лише ручний /виклик
 allowed-tools: Skill Agent AskUserQuestion Read Glob Bash(rm test-cases/*)
@@ -39,7 +39,7 @@ allowed-tools: Skill Agent AskUserQuestion Read Glob Bash(rm test-cases/*)
 Виклич скіл `jira-intake` (Skill tool) з аргументом-ключем. Збережи JSON як `task`.
 
 Зупинись, нічого далі не запускаючи, якщо:
-- `check_type` = `"api"` → «Це API-задача. Для API-задач буде окремий флоу, цей скіл працює лише з UI.»
+- `check_type` = `"api"` → «Це API-задача. Цей скіл працює лише з UI; для API-задач використай `/story-to-api-tests <ключ>`.»
 - `check_type` = `null` → поясни причину з `notes` (немає мітки `ui`/`api` або обидві) і попроси виправити мітки в Jira.
 - `acceptance_criteria` порожній → скажи про це й покажи `notes`.
 - замість JSON прийшла помилка або порожня відповідь.

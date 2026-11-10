@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "atlassian": {
+      "type": "http",
+      "url": "https://mcp.atlassian.com/v1/mcp"
+    },
+    "testomatio": {
+      "type": "http",
+      "url": "https://mcp.testomat.io/mcp/skypermit-7b3fe"
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest",
+        "--config",
+        "playwright-mcp.config.json"
+      ],
+      "env": {}
+    },
+    "postman": {
+      "type": "http",
+      "url": "https://mcp.postman.com/minimal"
+    }
+  }
+}

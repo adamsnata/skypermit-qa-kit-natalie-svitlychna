@@ -3,12 +3,12 @@ name: cover-gaps
 description: Закриває прогалини покриття — знаходить бізнес-правила гейтів із ../skypermit/docs/06-business-rules.md, для яких у test-cases/ ще немає кейсів, створює кейс на кожне, перевіряє його субагентом tc-verifier і повертає JSON-підсумок. Використовуй, коли користувач викликає /cover-gaps (напр. `/cover-gaps 3 PILOT`) або просить «закрий прогалини покриття», «знайди правила без кейсів», «згенеруй кейси для непокритих правил», "cover gaps".
 argument-hint: "[максимум правил] [гейт], напр. 3 PILOT"
 disable-model-invocation: true   # дорогий пайплайн — лише ручний /виклик
-allowed-tools: Read Grep Glob Write(test-cases/**) AskUserQuestion
+allowed-tools: Read Grep Glob Write(test-cases/api/**) AskUserQuestion
 ---
 
 # cover-gaps — кейси для непокритих правил
 
-Оркестратор: сам кейси не пише й не перевіряє, а керує трьома виконавцями — скриптом `scripts/uncovered-rules.mjs` (без моделі), скілом `ui-test-case-creator` (Sonnet) і субагентом `tc-verifier` (Haiku, лише читання). Спершу кейси генеруються по правилах по черзі (без запису файлів), потім увесь пакет проходить один гейт людини, і лише після «Схвалити» файли записуються й перевіряються.
+Оркестратор: сам кейси не пише й не перевіряє, а керує трьома виконавцями — скриптом `scripts/uncovered-rules.mjs` (без моделі), скілом `api-test-case-creator` (Sonnet) і субагентом `tc-verifier` (Haiku, лише читання). Спершу кейси генеруються по правилах по черзі (без запису файлів), потім увесь пакет проходить один гейт людини, і лише після «Схвалити» файли записуються й перевіряються.
 
 ## Обмеження
 
@@ -42,11 +42,11 @@ allowed-tools: Read Grep Glob Write(test-cases/**) AskUserQuestion
 
 ## Крок 3. Створи кейс
 
-Викликай скіл `ui-test-case-creator` (Skill tool), у `args` передай JSON правила з виводу скрипта як є (`id`, `gate`, `title`, `citation`, `open`). У `args` після JSON додай `reserved_ids` — `case_id` уже згенерованих у цьому прогоні кейсів. Скіл не питає й **не записує файли**: повертає повний текст кейса в блоці ```markdown, а останнім рядком — `{"rule_id","status","case_id","path"}`. Текст кейса зберігай у пам'яті оркестратора.
+Викликай скіл `api-test-case-creator` (Skill tool; режим «Дано правило»), у `args` передай JSON правила з виводу скрипта як є (`id`, `gate`, `title`, `citation`, `open`). У `args` після JSON додай `reserved_ids` — `case_id` уже згенерованих у цьому прогоні кейсів. Скіл не питає й **не записує файли**: повертає повний текст кейса в блоці ```markdown, а останнім рядком — `{"rule_id","status","case_id","path"}`. Текст кейса зберігай у пам'яті оркестратора.
 
 - `status = generated` і є текст кейса → додай кейс у пакет.
 - `status = skipped`, `open_question`, або текст кейса відсутній → це невдала спроба. Виклич скіл ще раз для того самого правила, додавши в `args` після JSON пояснення «попередня спроба відхилена: <текст помилки, якщо він є у відповіді скіла>». Максимум **2 спроби** на правило. Після другої невдачі додай у `results` запис зі `status: "failed"` і `reason: "<чому>"` та переходь до наступного правила.
-- Якщо скіл поверне `open_question` для правила, яке скрипт позначив `open: false`, — додай запис у `open_questions` із `source: "ui-test-case-creator"`, у `results` — `status: "open_question"`; спробу не повторюй.
+- Якщо скіл поверне `open_question` для правила, яке скрипт позначив `open: false`, — додай запис у `open_questions` із `source: "api-test-case-creator"`, у `results` — `status: "open_question"`; спробу не повторюй.
 
 Правило, яке з якоїсь причини не оброблялося (наприклад, прогін зупинено користувачем), іде в `results` зі `status: "skipped"`.
 
@@ -54,7 +54,7 @@ allowed-tools: Read Grep Glob Write(test-cases/**) AskUserQuestion
 
 Коли кейси по всіх правилах згенеровано, покажи **весь пакет повністю** (кожен кейс цілком, з шляхом) і постав одне питання через AskUserQuestion: «Схвалити / Правити / Відхилити».
 
-- **Схвалити** → запиши кожен кейс у `test-cases/<module>/<case_id>.md` (Write) і переходь до кроку 4. Якщо запис заблокував хук `validate-test-case.mjs` — `status: "failed"`, `reason` = текст помилки, без повторної спроби.
+- **Схвалити** → запиши кожен кейс у `test-cases/api/<case_id>.md` (Write) і переходь до кроку 4. Якщо запис заблокував хук `validate-test-case.mjs` — `status: "failed"`, `reason` = текст помилки, без повторної спроби.
 - **Правити** → внеси правки користувача в пакет і покажи його знову з тим самим питанням.
 - **Відхилити** → нічого не записуй; усі кейси пакета йдуть у `results` зі `status: "skipped"`, `reason: "пакет відхилено користувачем"`.
 
@@ -69,7 +69,7 @@ allowed-tools: Read Grep Glob Write(test-cases/**) AskUserQuestion
 | verdict | Дія |
 |---|---|
 | `pass` | У `results`: `status: "created"`, `verdict: "pass"`. Нічого більше. |
-| `fail` («не відповідає») | Видали файл кейсу: `rm test-cases/<module>/<case_id>.md`. Шлях має починатися з `test-cases/`, закінчуватися на `.md`, не містити `..` і збігатися з `path` зі кроку 3 — інакше не видаляй і запиши `status: "failed"`. Інакше у `results`: `status: "deleted"`, `verdict: "fail"`, `reason: "<failed_items.reason через «; »>"`. Видаляє саме оркестратор: `tc-verifier` лише читає. |
+| `fail` («не відповідає») | Видали файл кейсу: `rm test-cases/api/<case_id>.md`. Шлях має починатися з `test-cases/`, закінчуватися на `.md`, не містити `..` і збігатися з `path` зі кроку 3 — інакше не видаляй і запиши `status: "failed"`. Інакше у `results`: `status: "deleted"`, `verdict: "fail"`, `reason: "<failed_items.reason через «; »>"`. Видаляє саме оркестратор: `tc-verifier` лише читає. |
 | `no-spec` («документація мовчить») | Усі `silent_items` → `open_questions` (`{"rule_id","question","source": "tc-verifier","q_id"}`). Файл кейсу **залишається**: питання відкрите, а не доведено, що кейс хибний, і видалення втратило б роботу, яку можна доуточнити пізніше. У `results`: `status: "created"`, `verdict: "no-spec"`. |
 
 ## Крок 5. Підсумок

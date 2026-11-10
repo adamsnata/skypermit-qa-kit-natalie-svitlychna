@@ -37,24 +37,27 @@ allowed-tools:
 3. **Для кожного файлу** прочитай його через `Read` і візьми `case_id` із заголовка (`# E2E-OP-003: …` → `E2E-OP-003`). Шукай тест, у якого `clean_title` починається з `"<case_id>:"`.
    - Знайдено один — використовуй його `id`, `tests_create` не викликай. Якщо в нього немає тега `<key>`, додай це в звіт (оновлення тега робить окрема команда, скіл її не виконує).
    - Знайдено два й більше — зупинись для цього кейса, додай його до списку `duplicates` і не створюй нічого.
-   - Не знайдено — `tests_create`: `suite_id`, `title` = заголовок без `# `, `state: "manual"`, `priority` із файлу (за відсутності — `normal`), `link: [{"action":"add","type":"tag","value":"<key>"}]`, `description` = Markdown зі структурою: `**Jira:** <key>`, `**Doc ref:**`, `**Role:**`, `### Preconditions`, `### Steps`, `### Expected result`, `### Notes` (з поля Rationale).
+   - Не знайдено — `tests_create`: `suite_id`, `title` = заголовок без `# `, `state: "manual"`, `priority` із файлу (за відсутності — `normal`), `link: [{"action":"add","type":"tag","value":"<key>"}]`, `description` = Markdown зі структурою: `**Jira:** <key>`, `**Doc ref:**`, `**Role:**` (у файлі поле може бути `**Role:**` або `**Role(s):**` — приймай обидва, у описі став `**Role:**`), `### Preconditions`, `### Steps`, `### Expected result`, `### Notes` (з поля Rationale).
 4. **Результат.** Поверни таблицю й JSON: `{ "suite_id", "tests": [{ "case_id", "test_id", "action": "created|reused" }], "duplicates": [...] }`.
 
 ## Режим `run <title> <test_ids>`
 
 1. Перед створенням `runs_list` (`per_page: 100`) і перевір, чи немає рану з такою самою назвою (`tql: title == '<title>'`). Пройди **всі** сторінки: поки `meta.has_more` = `true`, викликай `runs_list` із наступним `page`; не зупиняйся на першій. Якщо є — не створюй другий, поверни його `id` і напиши про це.
-2. `runs_create`: `title`, `kind: "manual"` (для автотестів — `automated`), `test_ids`.
+2. `runs_create`: `title`, `kind`, `test_ids`. Для API-кейсів (`case_id` з `API-…`, результати з `postman-cli-run`) — `kind: "automated"`; для UI-кейсів (`E2E-…`) — `kind: "manual"`.
 3. Поверни `run_id`.
 
 ## Режим `report <run_id> <results>`
 
-Вхід: `run_id` і список результатів `{ test_id, status, message }`, де `status` — `passed | failed | skipped`. Для `failed` `message` обов'язковий: що очікувалось, що отримано, номер кроку.
+Вхід: `run_id` і список результатів `{ test_id | case_id, status, message }`, де `status` — `passed | failed | skipped`. Для `failed` `message` обов'язковий: що очікувалось, що отримано, номер кроку.
 
-1. `testruns_list` із `run_id` (`per_page: 100`, `fields: ["id","test_id","status"]`) — це дає відповідність `test_id` → числовий `testrun_id`. Пройди **всі** сторінки: поки `meta.has_more` = `true`, викликай `testruns_list` із наступним `page`; інакше тести з наступних сторінок потраплять до `not_in_run` помилково.
-2. Для кожного результату — `testruns_update`: `testrun_id`, `status`, `message`. Провали записуй так само, як успіхи.
-3. Якщо для якогось `test_id` немає запису в ране — не вигадуй, а винеси його в список `not_in_run`.
-4. Коли всі записи оновлено — закрий ран: `runs_update` із `run_id` і `status_event: "finish_manual"` (для автоматизованого або змішаного рану — `finish`).
-5. Поверни підсумок: `passed / failed / skipped`, посилання на ран, `not_in_run`.
+Результати з `postman-cli-run` приходять без `test_id`, лише з `case_id` (`API-OP-011`). Їх приймай як є, без ручного перетворення.
+
+1. **`case_id` → `test_id`.** Для результатів із `case_id` візьми відповідність із результату `upsert` (`tests[]`). Якщо його немає — `tests_list` (усі сторінки, `fields: ["id","clean_title"]`) і пошук тесту, у якого `clean_title` починається з `"<case_id>:"`. Не знайдено або знайдено кілька — не вгадуй: додай `case_id` у `not_in_run` (або `duplicates`) і йди далі.
+2. `testruns_list` із `run_id` (`per_page: 100`, `fields: ["id","test_id","status"]`) — це дає відповідність `test_id` → числовий `testrun_id`. Пройди **всі** сторінки: поки `meta.has_more` = `true`, викликай `testruns_list` із наступним `page`; інакше тести з наступних сторінок потраплять до `not_in_run` помилково.
+3. Для кожного результату — `testruns_update`: `testrun_id`, `status`, `message`. `failed` передавай як `failed` із повним `message`, `skipped` — як `skipped` із причиною; не замінюй і не пропускай їх. Для `passed` `message` може бути порожнім.
+4. Якщо для якогось `test_id` немає запису в ране — не вигадуй, а винеси його в список `not_in_run`.
+5. Коли всі записи оновлено — закрий ран: `runs_update` із `run_id` і `status_event`, який визначається за `kind` самого рану (його видно в `runs_list` або при створенні рану), незалежно від джерела результатів: `automated` → `finish`, `manual` → `finish_manual`.
+6. Поверни підсумок: `passed / failed / skipped`, посилання на ран, `not_in_run`.
 
 ## Чого скіл не робить
 

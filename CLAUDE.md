@@ -30,9 +30,17 @@ Base every test case on these pages and cite the page or section it comes from. 
 
 ### Виняток: локальні документи
 
-`scripts/uncovered-rules.mjs` не вміє ходити в MCP і **навмисно читає локальний**
-`../skypermit/docs/06-business-rules.md`. Це єдиний виняток із правила «документація — з Confluence».
-Ризик: локальна копія може відставати від `06 — Business Rules` у Confluence; за розбіжності діє Confluence.
+Є два винятки з правила «документація — з Confluence»:
+
+1. `scripts/uncovered-rules.mjs` не вміє ходити в MCP і **навмисно читає локальний**
+   `../skypermit/docs/06-business-rules.md`.
+   Ризик: локальна копія може відставати від `06 — Business Rules` у Confluence; за розбіжності діє Confluence.
+2. `../skypermit/public/openapi.yaml` — джерело статусів і тіл відповідей, яких немає в Confluence
+   (наприклад, `200 {"ok": true}` для `validate`). Його читають `tc-verifier` (`mode: api`),
+   `api-test-case-creator` і `postman-collection-builder`.
+   Таке значення в кейсі й у звіті позначай **«підтверджено лише openapi.yaml»**
+   (джерело — `openapi.yaml:<рядок>`). Якщо `openapi.yaml` суперечить Confluence
+   (`03 — API Contract`, `06 — Business Rules`), діє Confluence.
 
 Пошук `data-testid`, маршрутів і логіки гейтів, як і раніше, іде в коді `../skypermit` (`app/`, `components/`, `lib/`).
 
@@ -85,3 +93,4 @@ Create `test-cases/` and `test-plans/` when the first artifact is added.
 
 - `README.md` is encoded as UTF-16 LE with a BOM, not UTF-8. Tools such as `cat` and `grep` show it as spaced-out or garbled text.
 - Development happens on Windows (PowerShell primary, Git Bash available).
+- `.mcp.json` відстежується git: секрети в ньому лише як `${VAR}`, значення — у змінних ОС. Перед комітом перевіряй, що в `env` і `headers` лише `${…}`.
